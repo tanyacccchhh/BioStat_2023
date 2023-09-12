@@ -1,0 +1,150 @@
+---
+title: "first"
+author: "Chudnovets Tatyana"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+# Установка и загрузка библиотеки readr
+
+install.packages(c("ggplot2", "readr", "tibble", "tinytex", "stringr",
+"dplyr")) install.packages("readr")
+library(readr)
+library(ggplot2)
+library(readr) 
+library(tibble)
+library(tinytex) 
+library(stringr)
+library(dplyr)
+
+# Чтение файла TSV
+
+data <- read_tsv("C:/Users/tanya/Downloads/data_tsv.tsv")
+
+#Выбор строк
+data %>% slice(1:10)
+data %>% slice_head(n=10)
+data %>% slice_head(prop = 0.1)
+data %>% slice_sample(prop = 0.15)
+data %>% 
+  slice_min(order_by = Возраст)
+data %>% filter(Пол == "Женский")
+#Если использовать в '' в 'Пол'-это делает его строкой, а не ссылкой на столбец.
+data %>% filter(between(Возраст, 31, 34))
+`
+data %>% filter(near(Эозинофилы_E1, 3.38, tol = 0.1))
+`
+data %>% filter(if_all(.cols=contains("Базофилы"), .fns=function(x) x>1.5))
+`
+data %>% filter(if_any(.cols=contains("Базофилы"), .fns=function(x) x>1.5))
+`
+data %>% 
+  group_by(Группа) %>%
+  filter(Возраст > 34)
+
+# Мутация переменных
+data %>%
+  mutate(
+    `Женщины с четвертой группой крови` = ifelse(Пол == "Женский" & `Группа крови` == 'AB (IV)', "да", "Нет")
+  ) %>%
+  select(`Женщины с четвертой группой крови`, everything()) %>%
+  arrange(`Женщины с четвертой группой крови`)
+data %>%
+  mutate(
+    `Возрастная группа` = case_when(
+      Возраст < 20 ~ "<20",
+      between(Возраст, 20, 30) ~ "20-30",
+      Возраст > 30 ~ ">30") %>% as.factor()) %>%
+  select(Возраст, `Возрастная группа`)
+
+data %>%
+mutate(`Группа крови` = ifelse(is.na(`Группа крови`), "Heт данных", as.character(`Группа крови`))) %>%
+mutate(`Группа крови` = as.factor(`Группа крови`))
+data %>%
+rowwise() %>%
+mutate('Среднее пр базофилам' = mean(c_across(contains("Базофилы")))) %>%
+ungroup() %>%
+select (contains ("Базофил"))
+#Сортировка 
+data %>%
+arrange(Возраст)
+data %>% arrange(desc(Рост))
+#Повороты датафреймов
+install.packages("tidyr")
+library(tidyr)
+data %>%
+select('Группа', contains("E1")) %>%
+pivot_longer (! 'Группа')
+data %>%
+  select('Группа', contains("E1")) %>%
+  mutate(ID = row_number()) %>%
+  pivot_longer(cols = -c('Группа', ID)) %>%
+  pivot_wider(id_cols = ID)
+#Выбор уникальных сочетаний
+data %>%
+distinct(Группа, .keep_all=TRUE)
+#Разделение и склеивание
+tibble(var_1 = rep(paste0("first part", "__", "second_part"), 10)) %>%
+  separate(var_1, into = c("var_1", "var_2"), sep = "__")
+#Расчёт статистик
+data %>%
+  select(Группа, where(is.numeric)) %>%
+  group_by(Группа) %>%
+  summarize(across(where(is.numeric), function(x) mean(x, na.rm = TRUE)))
+ 
+ statistics <- list(
+  `Количество субъектов` = function(x) length(.x),
+  `Количество (есть данные)` = function(x) sum(!is.na(.x)),
+  `Нет данных` = function(x) sum(is.na(.x)),
+  `Ср. знач.` = function(x) ifelse(sum(!is.na(.x)) == 0, "Н/П*", as.character(round(mean(.x, na.rm = TRUE), 2))),
+  `Станд. отклон.` = function(x) ifelse(sum(!is.na(.x)) < 3, "Н/П*", as.character(round(sd(.x, na.rm = TRUE), 2))),
+  `95% ДИ для среднего` = function(x) as.character(round(sd(.x, na.rm = TRUE), 2)),
+  `мин. - макс.` = function(x) ifelse(sum(!is.na(.x)) == 0, "Н/П*", paste0(as.character(round(min(.x, na.rm = TRUE), 2)), " - ", as.character(round(max(.x, na.rm = TRUE), 2)))),
+  `Медиана` = function(x) ifelse(sum(!is.na(.x)) == 0, "Н/П*", as.character(round(median(.x, na.rm = TRUE), 2))),
+  `Q1 - Q3` = function(x) ifelse(sum(!is.na(.x)) == 0, "Н/П*", paste0(as.character(round(quantile(.x, 0.25, na.rm = TRUE), 2)), " - ", as.character(round(quantile(.x, 0.75, na.rm = TRUE), 2))))
+)
+results <- lapply(statistics, function(stat_func) {
+  sapply(data, stat_func)
+})
+results_df <- as.data.frame(results)
+rownames(results_df) <- names(statistics)
+print(results_df)
+library(stringr)
+
+data %>%
+select (`Группа`, where(is.factor)) %>%
+mutate(`Группа крови` = `Группа крови` %>% as. character () %>% replace_na("нет данных") %>% as. factor()) %>%
+count(`Группа`, `Группа крови`) %>%
+group_by(`Группа`) %>%
+mutate(`Процент по группе` = (n / sum(n)) %>% round(4) %>% "*"(100) 
+
+#Пакет flextable
+install.packages("flextable")
+library(flextable)
+
+
+library(flextable)
+library(readr)
+statistics <- data.frame(
+  `Количество субъектов` = nrow(your_data),
+  `Количество (есть данные)` = colSums(!is.na(your_data)),
+  `Нет данных` = colSums(is.na(your_data)),
+  `Ср. знач.` = ifelse(colSums(!is.na(your_data)) == 0, "Н/П*", round(colMeans(your_data, na.rm = TRUE), 2)),
+  `Станд. отклон.` = ifelse(colSums(!is.na(your_data)) < 3, "Н/П*", round(apply(your_data, 2, sd, na.rm = TRUE), 2)),
+  `95% ДИ для среднего` = round(apply(your_data, 2, sd, na.rm = TRUE), 2),
+  `мин. - макс.` = ifelse(colSums(!is.na(your_data)) == 0, "Н/П*", paste0(round(apply(your_data, 2, min, na.rm = TRUE), 2), " - ", round(apply(your_data, 2, max, na.rm = TRUE), 2))),
+  `Медиана` = ifelse(colSums(!is.na(your_data)) == 0, "Н/П*", round(apply(your_data, 2, median, na.rm = TRUE), 2)),
+  `Q1 - Q3` = ifelse(colSums(!is.na(your_data)) == 0, "Н/П*", paste0(round(apply(your_data, 2, quantile, probs = c(0.25, 0.75), na.rm = TRUE), 2)))
+)
+# Создание flextable
+flextable_obj <- flextable(statistics)
+# Вывод таблицы
+flextable_obj
+
+
+
+
+
